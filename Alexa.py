@@ -1,23 +1,40 @@
 # Import standard python modules.
 import sys
 import time
+import serial
 
 # Import Adafruit IO MQTT client.
 from Adafruit_IO import MQTTClient
 
-
-# Set Adafruit IO key & username below.
 ADAFRUIT_IO_KEY      = '317bca24bd7a4e89ba35110c24190573'
 ADAFRUIT_IO_USERNAME = 'tewodros'  
 
+ser = serial.Serial('/dev/cu.usbmodem1411', 115200)
 
-# Define callback functions which will be called when certain events happen.
+def passByte(b):
+    print("Passing byte " + str(b))
+    ser.write(bytes([int(b)]))
+
+def halt():
+    passByte(0)
+
+def moveForward():
+    passByte(1)
+
+def turnRight():
+    passByte(2)
+
+def turnLeft():
+    passByte(3)
+
+def moveBackward():
+    passByte(4)
+
 def connected(client):
     print('Connected to Adafruit IO!  Listening for Daisy changes...')
     # Subscribe to changes on a feeds like daisy stop and move forward.
     client.subscribe('daisy-stop')
     client.subscribe('daisy-move-forward')
-
 
 def disconnected(client):
     # Disconnected function will be called when the client disconnects.
@@ -25,15 +42,15 @@ def disconnected(client):
     sys.exit(1)
 
 def message(client, feed_id, payload):
-    # Message function will be called when a subscribed feed has a new value.
-    # The feed_id parameter identifies the feed, and the payload parameter has
-    # the new value.
     
     case = int(payload)                               # associate payload value with daisy commands                   
     
-    if case == 0:          
+    if case == 0:
+        halt()          
         print('Daisy has now stopped moving')
+
     elif case == 1:
+        moveForward()
         print('Daisy has now started moving forward')
 
 
@@ -55,3 +72,6 @@ client.loop_background()
 
 while True:
     time.sleep(10)
+
+if __name__ == "__main__":
+    main()
