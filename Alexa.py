@@ -9,8 +9,19 @@ from Adafruit_IO import MQTTClient
 ADAFRUIT_IO_KEY      = '317bca24bd7a4e89ba35110c24190573'
 ADAFRUIT_IO_USERNAME = 'tewodros'  
 
-ser = serial.Serial('/dev/cu.usbmodem1411', 115200)
-
+"""
+So some tips and tracking strategies that you all can utilize is 
+First typically a higher frame-rate equates to better performance and accuracy 
+You should try decreasing resolution and the size of the bbox to avoid having parts of the background in the set
+Avoid using cv2.resize() if possible 
+Also with drifting and recovery there are alot of pros and cons that come with every tracker. with no one perfect tracker.
+Some solutions include 
+-having bbox checks
+-using multiple trackers and having them check one another 
+You should also consider using the KCF trackers it is one of the best options out there
+Lastly eliminate unnecessary information from the initial bounding box to achieve better performance and tracking 
+"""
+"""
 def passByte(b):
     print("Passing byte " + str(b))
     ser.write(bytes([int(b)]))
@@ -29,12 +40,12 @@ def turnLeft():
 
 def moveBackward():
     passByte(4)
-
+"""
 def connected(client):
     print('Connected to Adafruit IO!  Listening for Daisy changes...')
     # Subscribe to changes on a feeds like daisy stop and move forward.
-    client.subscribe('daisy-stop')
-    client.subscribe('daisy-move-forward')
+    client.subscribe('daisy-call')
+    
 
 def disconnected(client):
     # Disconnected function will be called when the client disconnects.
@@ -42,16 +53,19 @@ def disconnected(client):
     sys.exit(1)
 
 def message(client, feed_id, payload):
+
     
+    """
     case = int(payload)                               # associate payload value with daisy commands                   
-    
     if case == 0:
-        halt()          
+       # halt()          
         print('Daisy has now stopped moving')
 
     elif case == 1:
-        moveForward()
+       # moveForward()
         print('Daisy has now started moving forward')
+"""
+
 
 
 # Create an MQTT client instance.
@@ -69,6 +83,9 @@ client.connect()
 # sent and received. 
 # Run a thread in the background so you can continue running script
 client.loop_background()
+
+msg = "Hello this is Daisy"
+client.publish('daisy-call', msg)
 
 while True:
     time.sleep(10)

@@ -13,7 +13,7 @@ log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
 logging.getLogger("flask_ask").setLevel(logging.DEBUG)
 
-ser = serial.Serial('/dev/cu.usbmodem1411', 115200)
+#ser = serial.Serial('/dev/cu.usbmodem1411', 115200)
 
 def passByte(b):
     print("Passing byte " + str(b))
@@ -39,21 +39,23 @@ def welcomemsg():
     welcome_msg = render_template('welcome')
     return question(welcome_msg)
 
-team5 = ['teddy', 'vlad', 'Jessie']
+Team5 = ['teddy', 'Vladimir', 'Jessie']
 
 @ask.intent("FollowIntent")
 def follow(firstname):
-    if firstname in team5:
+    if firstname in Team5:
         msg = "Tracking for {}".format(firstname)
-    elif firstname not in team5:
+    elif firstname == 'follow':
+    	return question("Who should I follow?").reprompt("May I please have a name?")
+    elif firstname not in Team5:
         msg = "I Can't follow {} he is not a member of Team 5".format(firstname)
         return question(msg).reprompt("May I please have another name?")
     return statement(msg)
-
+"""
 @ask.intent("WhoToFollowIntent")
 def what_is_my_name():
     return question("Who should I follow?").reprompt("May I please have a name?")
-
+"""
 @ask.intent("MoveIntent")
 def move(direction):
     if direction == 'left':
@@ -76,7 +78,6 @@ def move(direction):
 def stop():
     halt()
     return statement("Stopping")
-
 
 if __name__ == '__main__':
     app.run(debug=True)
