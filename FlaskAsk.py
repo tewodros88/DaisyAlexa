@@ -1,6 +1,4 @@
 import logging
-import time
-import serial
 from flask import Flask, render_template
 from flask_ask import Ask, statement, question
 
@@ -35,16 +33,12 @@ def follow(firstname):
 @ask.intent("MoveIntent")
 def move(direction):
     if direction == 'left':
-        #turnLeft()
         msg = "moving left"
     elif direction == 'right':
-        #turnRight()
         msg = "moving right"
     elif direction == 'forward':
-        #moveForward()
         msg = "moving forward"
     elif direction == 'backward':
-        #moveBackward()
         msg = "moving backward"
     elif direction == 'move':
         return question("In what direction?").reprompt("Can you please give a direction?")
