@@ -4,3 +4,8 @@ followTeddy: Tracking Teddy.
 
 followVlad: Tracking Vlad.
 
+round: Can you repeat the numbers {{ numbers|join(", ") }} backwards?
+
+win: Good job!
+
+lose: Sorry, that's the wrong answer.
