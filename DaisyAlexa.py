@@ -1,21 +1,25 @@
 import logging
 import sys
-import time
 import serial
 from random import randint
 from datetime import datetime
 from flask import Flask, render_template
 from flask_ask import Ask, statement, question, session
 from twilio.rest import Client
+from pymongo import MongoClient
 
-# Your Account SID from twilio.com/console
-account_sid = "AC2609d37a6f977d53f51357e0de9fd833"
-# Your Auth Token from twilio.com/console
-auth_token  = "656562c6b78c5d7fcd559e7f8483d6cc"
+
+account_sid = "AC2609d37a6f977d53f51357e0de9fd833" # Your Account SID from twilio.com/console
+auth_token  = "656562c6b78c5d7fcd559e7f8483d6cc"   # Your Auth Token from twilio.com/console
 
 client = Client(account_sid, auth_token)
 
-f = open('record.txt','w')
+
+MONGODB_URI = "mongodb://Teddy:password@ds253889.mlab.com:53889/records"
+client = MongoClient(MONGODB_URI, connectTimeoutMS=30000)
+db = client.get_default_database()
+records = db.records
+
 
 app = Flask(__name__)
 ask = Ask(app, "/")
@@ -24,7 +28,22 @@ log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
 logging.getLogger("flask_ask").setLevel(logging.DEBUG)
 
+def getRECORD(id_num):
+    record = records.find_one({"id_num":id_num})
+    return record
 
+def pushRECORD(record):
+    records.insert_one(record)
+
+def updateRecord(record, updates):
+    records.update_one({'_id': record['_id']},{
+                              '$set': updates
+                              }, upsert=False)
+
+def scoreCalc(prev_score, new_score, count):
+    overall = ((prev_score + new_score)/count)
+    return overall
+    
 @ask.launch
 def welcomemsg():
 
@@ -77,13 +96,29 @@ def game():
 def answer(first, second, third):
 
     winning_numbers = session.attributes['numbers']
+    response_list = [first, second, third]
+    record = getRECORD(1)
+    prev_score = record['score']
+    count = record['count'] + 1
     
     if [first, second, third] == winning_numbers:
         msg = render_template('win')
-        f.write('%s\n' %datetime.now().strftime('%m-%d-%Y %H:%M:%S'))
-        f.close()
+        score = 1
+        updates = {
+            "score": score,
+            "overall_performance": scoreCalc(prev_score, score, count),
+            "count": count 
+        }
+        updateRecord(record, updates)
     else:
         msg = render_template('lose')
+        score = (3 - len(list(set(winning_numbers) - set(response_list))))/3
+        updates = {
+            "score": score,
+            "overall_performance": scoreCalc(prev_score, score, count),
+            "count": count 
+        }
+        updateRecord(record, updates)
 
     return question(msg)
 
