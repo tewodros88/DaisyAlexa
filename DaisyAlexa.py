@@ -1,6 +1,5 @@
 import logging
 import sys
-import serial
 from random import randint
 from datetime import datetime
 from flask import Flask, render_template
@@ -28,6 +27,7 @@ log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
 logging.getLogger("flask_ask").setLevel(logging.DEBUG)
 
+
 def getRECORD(id_num):
     record = records.find_one({"id_num":id_num})
     return record
@@ -40,11 +40,21 @@ def updateRecord(record, updates):
                               '$set': updates
                               }, upsert=False)
 
-def scoreCalc(prev_score, new_score, count):
-    overall = ((prev_score + new_score)/count)
+def scoreCalc(overall_score, new_score, count):
+    overall = ((overall_score)/count)
     return overall
+
+def getMatches(win,res):
+    numMatch = 0
+
+    for i in range(len(win)):
+        if win[i] == res[i]:
+            numMatch = numMatch + 1
+    return numMatch
     
+
 @ask.launch
+
 def welcomemsg():
 
     welcome_msg = render_template('welcome')
@@ -52,6 +62,7 @@ def welcomemsg():
     return question(welcome_msg)
 
 @ask.intent("MoveIntent")
+
 def move(direction):
 
     if direction == 'left':
@@ -70,6 +81,7 @@ def move(direction):
 Team5 = ['teddy', 'Vladimir', 'Jessie']
 
 @ask.intent("FollowIntent")
+
 def follow(firstname):
 
     if firstname in Team5:
@@ -83,44 +95,57 @@ def follow(firstname):
     return question(msg)
 
 @ask.intent("MemoryGameIntent")
+
 def game():
 
-    numbers = [randint(0, 9) for _ in range(3)]
+    numbers = [randint(0, 9) for _ in range(5)]
     round_msg = render_template('round', numbers=numbers)
     session.attributes['numbers'] = numbers[::-1]  # reverse
 
     return question(round_msg)
 
-@ask.intent("AnswerIntent", convert={'first': int, 'second': int, 'third': int})
+@ask.intent("AnswerIntent", convert={'first': int, 'second': int, 'third': int, 'fourth': int, 'fifth': int})
 
-def answer(first, second, third):
+def answer(first, second, third, fourth, fifth):
 
     winning_numbers = session.attributes['numbers']
-    response_list = [first, second, third]
+    response_list = [first, second, third, fourth, fifth]
     record = getRECORD(1)
-    prev_score = record['score']
     count = record['count'] + 1
     
-    if [first, second, third] == winning_numbers:
+    if [first, second, third, fourth, fifth] == winning_numbers:
         msg = render_template('win')
         score = 1
+        overall_score = record['overall_score'] + score
         updates = {
             "score": score,
-            "overall_performance": scoreCalc(prev_score, score, count),
+            "overall_score": overall_score,
+            "overall_performance": scoreCalc(overall_score, score, count),
             "count": count 
         }
         updateRecord(record, updates)
     else:
         msg = render_template('lose')
-        score = (3 - len(list(set(winning_numbers) - set(response_list))))/3
+        score = (getMatches(winning_numbers, response_list)/5)
+        overall_score = record['overall_score'] + score
         updates = {
             "score": score,
-            "overall_performance": scoreCalc(prev_score, score, count),
+            "overall_score": overall_score,
+            "overall_performance": scoreCalc(overall_score, score, count),
             "count": count 
         }
         updateRecord(record, updates)
 
     return question(msg)
+
+@ask.intent("MemPerformanceIntent")
+
+def Performance():
+    record = getRECORD(1)
+    OverallScore = record['overall_performance']*100
+
+    return question("Your overall score is {} percent. Would you me to help you with anything else?".format('%.2f'%(OverallScore)))
+
 
 @ask.intent("CallIntent")
 def call():
@@ -134,6 +159,7 @@ def call():
 	return question("Making call, Can I help you with anything else?").reprompt("May I please have a command?")
 
 @ask.intent("TextIntent")
+
 def text():
 
 	message = client.messages.create(
@@ -145,6 +171,7 @@ def text():
 	return question("Sending text, Can I help you with anything else?").reprompt("May I please have a command?")
 
 @ask.intent("YesIntent")
+
 def yes():
 
     return question("What would you like to do?").reprompt("May I please have a command?")
@@ -155,6 +182,7 @@ def no():
     return statement("Ok. goodbye")
 
 @ask.intent("AMAZON.StopIntent")
+
 def stop():
 
     return statement("Stopping")

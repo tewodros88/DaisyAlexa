@@ -1,7 +1,7 @@
 welcome: This is Daisy. Can I help you with anything?
 
-round: Welcome to memory game. I'm going to say three numbers for you to repeat backwards. Can you repeat the numbers {{ numbers|join(", ") }} backwards?
+round: Welcome to memory game. I'm going to say five numbers for you to repeat backwards. Can you repeat the numbers {{ numbers|join(", ") }} backwards?
 
-win: Good job!, That was correct. Would you like to move on to the next level?
+win: Good job!, That was correct. What else can I help you with?
 
 lose: Sorry, that's the wrong answer. If you would like to try again say try again?
