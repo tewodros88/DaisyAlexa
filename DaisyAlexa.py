@@ -194,14 +194,18 @@ def plot():
 
     xaxis = list(range(1, count))
     yaxis = data
+    y_mean = [record['overall_performance']*100]*len(xaxis)
 
     fig, ax = plt.subplots()
-    ax.plot(xaxis, yaxis)
+    data_line = ax.plot(xaxis,yaxis, label='Data', marker='o')
+    mean_line = ax.plot(xaxis,y_mean, label='Mean', linestyle='--')
+
 
     ax.set(xlabel='Number of times played (#)', ylabel='Percentage Score (%)',
                 title='Memory Game Performance Analytics')
-    plt.savefig('MemoryGraph.png')
+    legend = ax.legend(loc='upper right')
 
+    plt.savefig('MemoryGraph.png')
     SendMail('MemoryGraph.png')
 
     return question("Emailing data, Can I help you with anything else?").reprompt("May I please have a command?")
