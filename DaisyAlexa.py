@@ -7,7 +7,6 @@ from flask_ask import Ask, statement, question, session
 from twilio.rest import Client
 from pymongo import MongoClient
 
-
 account_sid = "AC2609d37a6f977d53f51357e0de9fd833" # Your Account SID from twilio.com/console
 auth_token  = "656562c6b78c5d7fcd559e7f8483d6cc"   # Your Auth Token from twilio.com/console
 
@@ -51,7 +50,7 @@ def getMatches(win,res):
         if win[i] == res[i]:
             numMatch = numMatch + 1
     return numMatch
-    
+
 
 @ask.launch
 
@@ -112,7 +111,7 @@ def answer(first, second, third, fourth, fifth):
     response_list = [first, second, third, fourth, fifth]
     record = getRECORD(1)
     count = record['count'] + 1
-    
+
     if [first, second, third, fourth, fifth] == winning_numbers:
         msg = render_template('win')
         score = 1
@@ -121,7 +120,7 @@ def answer(first, second, third, fourth, fifth):
             "score": score,
             "overall_score": overall_score,
             "overall_performance": scoreCalc(overall_score, score, count),
-            "count": count 
+            "count": count
         }
         updateRecord(record, updates)
     else:
@@ -132,7 +131,7 @@ def answer(first, second, third, fourth, fifth):
             "score": score,
             "overall_score": overall_score,
             "overall_performance": scoreCalc(overall_score, score, count),
-            "count": count 
+            "count": count
         }
         updateRecord(record, updates)
 
@@ -151,7 +150,7 @@ def Performance():
 def call():
 
 	call = client.calls.create(
-		to="+12404785891", 
+		to="+12404785891",
 		from_="+12028043762",
 	    url="http://demo.twilio.com/docs/voice.xml")
 	print(call.sid)
@@ -163,7 +162,7 @@ def call():
 def text():
 
 	message = client.messages.create(
-		to="+12404785891", 
+		to="+12404785891",
 		from_="+12028043762",
 		body="Hello from Daisy")
 	print(message.sid)
@@ -186,6 +185,6 @@ def no():
 def stop():
 
     return statement("Stopping")
- 
+
 if __name__ == '__main__':
     app.run(debug=True)
