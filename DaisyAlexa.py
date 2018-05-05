@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import logging
 import sys
 from random import randint
@@ -6,6 +8,15 @@ from flask import Flask, render_template
 from flask_ask import Ask, statement, question, session
 from twilio.rest import Client
 from pymongo import MongoClient
+from multiprocessing.managers import SyncManager
+from queue import Empty
+
+class NeuronManager(SyncManager):
+    pass
+NeuronManager.register('get_alexa_neuron')
+
+manager = NeuronManager(address=('', 4081), authkey=b'daisy')
+manager.connect()
 
 account_sid = "AC2609d37a6f977d53f51357e0de9fd833" # Your Account SID from twilio.com/console
 auth_token  = "656562c6b78c5d7fcd559e7f8483d6cc"   # Your Auth Token from twilio.com/console
@@ -36,11 +47,11 @@ def pushRECORD(record):
 
 def updateRecord(record, updates):
     records.update_one({'_id': record['_id']},{
-                              '$set': updates
-                              }, upsert=False)
+        '$set': updates
+        }, upsert=False)
 
-def scoreCalc(overall_score, new_score, count):
-    overall = ((overall_score)/count)
+    def scoreCalc(overall_score, new_score, count):
+        overall = ((overall_score)/count)
     return overall
 
 def getMatches(win,res):
@@ -86,7 +97,7 @@ def follow(firstname):
     if firstname in Team5:
         msg = "Tracking for {}. Can I help you with anything else?".format(firstname)
     elif firstname == 'follow':
-    	return question("Who should I follow?").reprompt("May I please have a name?")
+        return question("Who should I follow?").reprompt("May I please have a name?")
     elif firstname not in Team5:
         msg = "I Can't follow {} he is not a member of Team 5".format(firstname)
         return question(msg).reprompt("May I please have another name?")
@@ -117,22 +128,22 @@ def answer(first, second, third, fourth, fifth):
         score = 1
         overall_score = record['overall_score'] + score
         updates = {
-            "score": score,
-            "overall_score": overall_score,
-            "overall_performance": scoreCalc(overall_score, score, count),
-            "count": count
-        }
+                "score": score,
+                "overall_score": overall_score,
+                "overall_performance": scoreCalc(overall_score, score, count),
+                "count": count
+                }
         updateRecord(record, updates)
     else:
         msg = render_template('lose')
         score = (getMatches(winning_numbers, response_list)/5)
         overall_score = record['overall_score'] + score
         updates = {
-            "score": score,
-            "overall_score": overall_score,
-            "overall_performance": scoreCalc(overall_score, score, count),
-            "count": count
-        }
+                "score": score,
+                "overall_score": overall_score,
+                "overall_performance": scoreCalc(overall_score, score, count),
+                "count": count
+                }
         updateRecord(record, updates)
 
     return question(msg)
@@ -149,25 +160,25 @@ def Performance():
 @ask.intent("CallIntent")
 def call():
 
-	call = client.calls.create(
-		to="+12404785891",
-		from_="+12028043762",
-	    url="http://demo.twilio.com/docs/voice.xml")
-	print(call.sid)
+    call = client.calls.create(
+            to="+12404785891",
+            from_="+12028043762",
+            url="http://demo.twilio.com/docs/voice.xml")
+    print(call.sid)
 
-	return question("Making call, Can I help you with anything else?").reprompt("May I please have a command?")
+        return question("Making call, Can I help you with anything else?").reprompt("May I please have a command?")
 
 @ask.intent("TextIntent")
 
 def text():
 
-	message = client.messages.create(
-		to="+12404785891",
-		from_="+12028043762",
-		body="Hello from Daisy")
-	print(message.sid)
+    message = client.messages.create(
+            to="+12404785891",
+            from_="+12028043762",
+            body="Hello from Daisy")
+    print(message.sid)
 
-	return question("Sending text, Can I help you with anything else?").reprompt("May I please have a command?")
+        return question("Sending text, Can I help you with anything else?").reprompt("May I please have a command?")
 
 @ask.intent("YesIntent")
 
@@ -187,4 +198,14 @@ def stop():
     return statement("Stopping")
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    parser = argparse.ArgumentParse(description="Start Flask-Ask")
+    parser.add_autment("--set-ip"
+            dest="ip",
+            default="localhost",
+            help="Specify the IP address to use for initialization")
+    parser.add_argument("--set-port",
+            dest="port",
+            default="5000",
+            help="Specify the port to use for initialization")
+    args = parser.parse_args()
+    app.run(args.ip, int(args.port), debug=True, threaded=True)
