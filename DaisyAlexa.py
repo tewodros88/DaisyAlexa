@@ -100,7 +100,8 @@ def SendMail(ImgFileName):
 def welcomemsg():
 
     welcome_msg = render_template('welcome')
-
+    if connected:
+        alexa_neuron.update([('state', 'idle'), ('name', None), ('direction', None)])
     return question(welcome_msg)
 
 
@@ -119,6 +120,9 @@ def move(direction):
     elif direction == 'move':
         return question("In what direction?").reprompt("Can you please give a direction?")
 
+    if connected:
+        alexa_neuron.update([('state', 'moving'), ('name', None), ('direction', direction)])
+
     return question("Moving {}. Can I help you with anything else?".format(direction))
 
 
@@ -136,6 +140,9 @@ def follow(firstname):
         msg = "I Can't follow {} he is not a member of Team 5".format(firstname)
         return question(msg).reprompt("May I please have another name?")
 
+    if connected:
+        alexa_neuron.update([('state', 'tracking'), ('name', firstname), ('direction', None)])
+
     return question(msg)
 
 
@@ -146,6 +153,9 @@ def game():
     numbers = [randint(0, 9) for _ in range(5)]
     round_msg = render_template('round', numbers=numbers)
     session.attributes['numbers'] = numbers[::-1]  # reverse
+
+    if connected:
+        alexa_neuron.update([('state', 'idle'), ('name', None), ('direction', None)])
 
     return question(round_msg)
 
@@ -265,6 +275,8 @@ def no():
 @ask.intent("AMAZON.StopIntent")
 
 def stop():
+    if connected:
+        alexa_neuron.update([('state', 'idle'), ('name', None), ('direction', None)])
     return statement("Stopping")
 
 if __name__ == '__main__':
