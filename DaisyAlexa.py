@@ -14,9 +14,15 @@ from queue import Empty
 import argparse
 class NeuronManager(SyncManager):
     pass
+connected = True
 NeuronManager.register('get_alexa_neuron')
 manager = NeuronManager(address=('', 4081), authkey=b'daisy')
-manager.connect()
+try:
+    manager.connect()
+    print("Alexa conncted to neuron manager.")
+except ConnectionRefusedError:
+    print("Alexa not connected to neuron manager.")
+    connected = False
 
 import os
 import smtplib
