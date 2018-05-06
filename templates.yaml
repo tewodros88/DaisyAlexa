@@ -4,4 +4,4 @@ round: Welcome to memory game. I'm going to say five numbers for you to repeat b
 
 win: Good job!, That was correct. What else can I help you with?
 
-lose: Sorry, that's the wrong answer. If you would like to try again say try again?
+lose: Sorry, that's the wrong answer. If you would like to try again say try again? Or say something else for other features.
