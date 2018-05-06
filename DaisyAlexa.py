@@ -15,10 +15,12 @@ import argparse
 class NeuronManager(SyncManager):
     pass
 connected = True
+alexa_neuron = None
 NeuronManager.register('get_alexa_neuron')
 manager = NeuronManager(address=('', 4081), authkey=b'daisy')
 try:
     manager.connect()
+    alexa_neuron = manager.get_alexa_neuron()
     print("Alexa conncted to neuron manager.")
 except ConnectionRefusedError:
     print("Alexa not connected to neuron manager.")
@@ -109,15 +111,7 @@ def welcomemsg():
 
 def move(direction):
 
-    if direction == 'left':
-        msg = "moving left"
-    elif direction == 'right':
-        msg = "moving right"
-    elif direction == 'forward':
-        msg = "moving forward"
-    elif direction == 'backward':
-        msg = "moving backward"
-    elif direction == 'move':
+    if direction == 'move':
         return question("In what direction?").reprompt("Can you please give a direction?")
 
     if connected:
@@ -137,6 +131,8 @@ def follow(firstname):
     elif firstname == 'follow':
         return question("Who should I follow?").reprompt("May I please have a name?")
     elif firstname not in Team5:
+        if connected:
+            alexa_neuron.update([('state', 'tracking'), ('name', firstname), ('direction', None)])
         msg = "I Can't follow {} he is not a member of Team 5".format(firstname)
         return question(msg).reprompt("May I please have another name?")
 
