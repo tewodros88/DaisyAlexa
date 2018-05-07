@@ -42,7 +42,7 @@ twilioclient = Client(account_sid, auth_token)
 MONGODB_URI = "mongodb://Teddy:password@ds253889.mlab.com:53889/records"
 client = MongoClient(MONGODB_URI, connectTimeoutMS=30000)
 db = client.get_default_database()
-records = db.records
+memory_records = db.memory_records
 
 
 app = Flask(__name__)
@@ -53,20 +53,20 @@ log.setLevel(logging.DEBUG)
 logging.getLogger("flask_ask").setLevel(logging.DEBUG)
 
 
-def getRECORD(id_num):
-    record = records.find_one({"id_num":id_num})
+def get_MEMORY_RECORD(id_num):
+    record = memory_records.find_one({"id_num":id_num})
     return record
 
-def pushRECORD(record):
-    records.insert_one(record)
+def push_MEMORY_RECORD(record):
+    memory_records.insert_one(record)
 
-def updateRecord(record, updates):
-    records.update_one({'_id': record['_id']},{
+def update_MEMORY_RECORD(record, updates):
+    memory_records.update_one({'_id': record['_id']},{
         '$set': updates
         }, upsert=False)
 
-    def scoreCalc(overall_score, new_score, count):
-        overall = ((overall_score)/count)
+def scoreCalc(overall_score, new_score, count):
+    overall = ((overall_score)/count)
     return overall
 
 def getMatches(win,res):
@@ -139,6 +139,8 @@ def follow(firstname):
     if connected:
         alexa_neuron.update([('state', 'tracking'), ('name', firstname), ('direction', None)])
 
+    session.attributes['name'] = firstname
+
     return question(msg)
 
 
@@ -162,7 +164,7 @@ def answer(first, second, third, fourth, fifth):
 
     winning_numbers = session.attributes['numbers']
     response_list = [first, second, third, fourth, fifth]
-    record = getRECORD(1)
+    record = get_MEMORY_RECORD(1)
     count = record['count'] + 1
 
     if [first, second, third, fourth, fifth] == winning_numbers:
@@ -178,7 +180,7 @@ def answer(first, second, third, fourth, fifth):
                 "count": count,
                 "data": record["data"]
         }
-        updateRecord(record, updates)
+        update_MEMORY_RECORD(record, updates)
     else:
         msg = render_template('lose')
         score = (getMatches(winning_numbers, response_list)/5)
@@ -191,7 +193,7 @@ def answer(first, second, third, fourth, fifth):
                 "count": count,
                 "data": record["data"]
         }
-        updateRecord(record, updates)
+        update_MEMORY_RECORD(record, updates)
 
     return question(msg)
 
@@ -200,7 +202,7 @@ def answer(first, second, third, fourth, fifth):
 
 def performance():
 
-    record = getRECORD(1)
+    record = get_MEMORY_RECORD(1)
     OverallScore = record['overall_performance']*100
 
     return question("Your overall score is {} percent. Would you me to help you with anything else?".format('%.2f'%(OverallScore)))
@@ -210,7 +212,7 @@ def performance():
 
 def plot():
 
-    record = getRECORD(1)
+    record = get_MEMORY_RECORD(1)
     count = record['count'] + 1
     data = record['data']
 
