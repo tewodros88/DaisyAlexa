@@ -128,7 +128,7 @@ def follow(firstname):
 
     if firstname in Team5:
         msg = "Tracking for {}. Can I help you with anything else?".format(firstname)
-    elif firstname == 'follow':
+    elif firstname == 'follow' or firstname is None:
         return question("Who should I follow?").reprompt("May I please have a name?")
     elif firstname not in Team5:
         if connected:
