@@ -10,6 +10,7 @@ from twilio.rest import Client
 from pymongo import MongoClient
 from multiprocessing.managers import SyncManager
 from queue import Empty
+import io
 
 import argparse
 class NeuronManager(SyncManager):
@@ -77,8 +78,7 @@ def getMatches(win,res):
             numMatch = numMatch + 1
     return numMatch
 
-def SendMail(ImgFileName):
-    img_data = open(ImgFileName, 'rb').read()
+def SendMail(mem_plot):
     msg = MIMEMultipart()
     msg['Subject'] = 'Daisy Analytics'
     msg['From'] = 'tewodrostesting@gmail.com'
@@ -86,8 +86,8 @@ def SendMail(ImgFileName):
 
     text = MIMEText("Plot for Memory Game")
     msg.attach(text)
-    image = MIMEImage(img_data, name=os.path.basename(ImgFileName))
-    msg.attach(image)
+    mem_plot_img = MIMEImage(mem_plot)
+    msg.attach(mem_plot_img)
 
     s = smtplib.SMTP('smtp.gmail.com', 587)
     s.ehlo()
@@ -193,7 +193,7 @@ def answer(first, second, third, fourth, fifth):
         count = record['count'] + 1
         msg = render_template('win')
         score = 1
-        overall_score = record['overall_score'] + score
+        overall_score = sum(record["data"])
         record.setdefault("data",[]).append(score*100)
 
         updates = {
@@ -209,7 +209,7 @@ def answer(first, second, third, fourth, fifth):
         count = record['count'] + 1
         msg = render_template('lose')
         score = (getMatches(winning_numbers, response_list)/5)
-        overall_score = record['overall_score'] + score
+        overall_score = sum(record["data"])
         record.setdefault("data",[]).append(score*100)
         updates = {
                 "score": score,
@@ -257,7 +257,7 @@ def plot():
 
     xaxis = list(range(1, count))
     yaxis = data
-    y_mean = [record['overall_performance']*100]*len(xaxis)
+    y_mean = [record['overall_performance']]*len(xaxis)
 
     fig, ax = plt.subplots()
     data_line = ax.plot(xaxis,yaxis, label='Data', marker='o')
@@ -268,8 +268,14 @@ def plot():
             title='Memory Game Performance Analytics')
     legend = ax.legend(loc='upper right')
 
-    plt.savefig('MemoryGraph.png')
-    SendMail('MemoryGraph.png')
+    mem_plot = io.BytesIO()
+
+    plt.savefig(mem_plot, format="png")
+    mem_plot.seek(0)
+
+    SendMail(mem_plot.getvalue())
+
+    mem_plot.close()
 
     return question("Emailing data, Can I help you with anything else?").reprompt("May I please have a command?")
 
@@ -346,4 +352,4 @@ if __name__ == '__main__':
             default="5000",
             help="Specify the port to use for initialization")
     args = parser.parse_args()
-    app.run(args.ip, int(args.port), debug=True, threaded=True)
+    app.run(args.ip, int(args.port), debug=True)
