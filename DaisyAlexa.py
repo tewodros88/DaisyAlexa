@@ -233,6 +233,26 @@ def plot():
     return question("Emailing data, Can I help you with anything else?").reprompt("May I please have a command?")
 
 
+@ask.intent("StartExerciseIntent")
+
+def start_exercise():
+    session.attributes['exercise'] = 'STARTING'
+    return question("Starting exercise session, when you are ready say start.").reprompt("Are you ready now?")
+
+@ask.intent("ExerciseIntent")
+
+def exercise():
+    if 'exercise' not in session.attributes or session.attributes['exercise'] != 'STARTING':
+        return question("Not in exercise session. Can I help you with anything else?")
+    session.attributes['exercise'] = 'IN_PROCESS'
+    return question("Start Exercising now.")
+
+@ask.intent("StopExerciseIntent")
+def exercise():
+    if 'exercise' not in session.attributes or session.attributes['exercise'] != 'IN_PROCESS':
+        return question("Not in exercise session. Can I help you with anything else?")
+    return question("You did {} squats. Session has been saved. Can I help you with anything else?".format(0)).reprompt("May I please have a command?")
+
 @ask.intent("CallIntent")
 
 def call():
