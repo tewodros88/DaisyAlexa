@@ -53,8 +53,8 @@ log.setLevel(logging.DEBUG)
 logging.getLogger("flask_ask").setLevel(logging.DEBUG)
 
 
-def get_MEMORY_RECORD(id_num):
-    record = memory_records.find_one({"id_num":id_num})
+def get_MEMORY_RECORD(name):
+    record = memory_records.find_one({"user":name})
     return record
 
 def push_MEMORY_RECORD(record):
@@ -120,7 +120,7 @@ def move(direction):
     return question("Moving {}. Can I help you with anything else?".format(direction))
 
 
-Team5 = ['teddy', 'Vladimir', 'Jessie']
+Team5 = ['Jessie', 'teddy', 'Vladimir']
 
 @ask.intent("FollowIntent")
 
@@ -139,7 +139,7 @@ def follow(firstname):
     if connected:
         alexa_neuron.update([('state', 'tracking'), ('name', firstname), ('direction', None)])
 
-    session.attributes['name'] = firstname
+    session.attributes['user'] = firstname
 
     return question(msg)
 
@@ -161,13 +161,36 @@ def game():
 @ask.intent("AnswerIntent", convert={'first': int, 'second': int, 'third': int, 'fourth': int, 'fifth': int})
 
 def answer(first, second, third, fourth, fifth):
+    if 'numbers' not in session.attributes:
+        return question("Not in memory game session. Can I help you with anything else?")
 
     winning_numbers = session.attributes['numbers']
     response_list = [first, second, third, fourth, fifth]
-    record = get_MEMORY_RECORD(1)
-    count = record['count'] + 1
+
+    if 'user' not in session.attributes:
+        msg = render_template('not_tracking')
+        if [first, second, third, fourth, fifth] == winning_numbers:
+            msg = msg + ' ' + render_template('win')
+        else:
+            msg = msg + ' ' + render_template('lose')
+        return question(msg)
+
+    record = get_MEMORY_RECORD(session.attributes['user'])
+    if record is None:
+        newRecord = {
+            "user": session.attributes['user'],
+            "id_num": Team5.index(session.attributes['user']),
+            "count": 0,
+            "overall_score": 0,
+            "overall_performance": 0,
+            "score": 0,
+            "data": []
+        }
+        push_MEMORY_RECORD(newRecord)
 
     if [first, second, third, fourth, fifth] == winning_numbers:
+        record = get_MEMORY_RECORD(session.attributes['user'])
+        count = record['count'] + 1
         msg = render_template('win')
         score = 1
         overall_score = record['overall_score'] + score
@@ -182,6 +205,8 @@ def answer(first, second, third, fourth, fifth):
         }
         update_MEMORY_RECORD(record, updates)
     else:
+        record = get_MEMORY_RECORD(session.attributes['user'])
+        count = record['count'] + 1
         msg = render_template('lose')
         score = (getMatches(winning_numbers, response_list)/5)
         overall_score = record['overall_score'] + score
@@ -195,14 +220,22 @@ def answer(first, second, third, fourth, fifth):
         }
         update_MEMORY_RECORD(record, updates)
 
+    session.attributes.pop('numbers', None)
+
     return question(msg)
 
 
 @ask.intent("MemPerformanceIntent")
 
 def performance():
+    if 'user' not in session.attributes:
+        return question("Not tracking anyone right now. Can I help you with anything else?")
 
-    record = get_MEMORY_RECORD(1)
+    record = get_MEMORY_RECORD(session.attributes['user'])
+
+    if record is None:
+        return question("There are no records for this user. Can I help you with anything else?")
+
     OverallScore = record['overall_performance']*100
 
     return question("Your overall score is {} percent. Would you me to help you with anything else?".format('%.2f'%(OverallScore)))
@@ -211,8 +244,14 @@ def performance():
 @ask.intent("PlotIntent")
 
 def plot():
+    if 'user' not in session.attributes:
+        return question("Not tracking anyone right now. Can I help you with anything else?")
 
-    record = get_MEMORY_RECORD(1)
+    record = get_MEMORY_RECORD(session.attributes['user'])
+
+    if record is None:
+        return question("There are no records for this user. Can I help you with anything else?")
+
     count = record['count'] + 1
     data = record['data']
 
@@ -256,15 +295,14 @@ def exercise():
     return question("You did {} squats. Session has been saved. Can I help you with anything else?".format(0)).reprompt("May I please have a command?")
 
 @ask.intent("CallIntent")
-
 def call():
+
     call = twilioclient.calls.create(
             to="+12404785891",
             from_="+12028043762",
             url="http://demo.twilio.com/docs/voice.xml")
     print(call.sid)
     return question("Making call, Can I help you with anything else?").reprompt("May I please have a command?")
-
 
 @ask.intent("TextIntent")
 
