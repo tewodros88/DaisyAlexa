@@ -11,6 +11,7 @@ from pymongo import MongoClient
 from multiprocessing.managers import SyncManager
 from queue import Empty
 import io
+import time
 
 import argparse
 class NeuronManager(SyncManager):
@@ -44,6 +45,7 @@ MONGODB_URI = "mongodb://Teddy:password@ds253889.mlab.com:53889/records"
 client = MongoClient(MONGODB_URI, connectTimeoutMS=30000)
 db = client.get_default_database()
 memory_records = db.memory_records
+exercise_records = db.exercise_records
 
 
 app = Flask(__name__)
@@ -53,6 +55,14 @@ log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
 logging.getLogger("flask_ask").setLevel(logging.DEBUG)
 
+
+def clear_session_attributes():
+    if 'user' in session.attributes:
+        currUser = session.attributes['user']
+        session.attributes.clear()
+        session.attributes['user'] = currUser
+    else:
+        session.attributes.clear()
 
 def get_MEMORY_RECORD(name):
     record = memory_records.find_one({"user":name})
@@ -66,7 +76,19 @@ def update_MEMORY_RECORD(record, updates):
         '$set': updates
         }, upsert=False)
 
-def scoreCalc(overall_score, new_score, count):
+def get_EXERCISE_RECORD(name):
+    record = exercise_records.find_one({"user":name})
+    return record
+
+def push_EXERCISE_RECORD(record):
+    exercise_records.insert_one(record)
+
+def update_EXERCISE_RECORD(record, updates):
+    exercise_records.update_one({'_id': record['_id']},{
+        '$set': updates
+        }, upsert=False)
+
+def scoreCalc(overall_score, count):
     overall = ((overall_score)/count)
     return overall
 
@@ -78,16 +100,23 @@ def getMatches(win,res):
             numMatch = numMatch + 1
     return numMatch
 
-def SendMail(mem_plot):
+def SendMail(mem_plot, ex_plot):
     msg = MIMEMultipart()
     msg['Subject'] = 'Daisy Analytics'
     msg['From'] = 'tewodrostesting@gmail.com'
     msg['To'] = 'tewodrostesting@gmail.com'
 
-    text = MIMEText("Plot for Memory Game")
+    text = MIMEText("Plots of Collected Data for " + session.attributes['user'])
     msg.attach(text)
-    mem_plot_img = MIMEImage(mem_plot)
-    msg.attach(mem_plot_img)
+    if mem_plot is not None:
+        mem_plot_img = MIMEImage(mem_plot)
+        mem_plot_img.add_header('Content-Disposition', 'attachment', filename="MemoryGraph.png")
+        msg.attach(mem_plot_img)
+    if ex_plot is not None:
+        ex_plot_img = MIMEImage(ex_plot)
+        ex_plot_img.add_header('Content-Disposition', 'attachment', filename="ExerciseGraph.png")
+        msg.attach(ex_plot_img)
+
 
     s = smtplib.SMTP('smtp.gmail.com', 587)
     s.ehlo()
@@ -100,7 +129,6 @@ def SendMail(mem_plot):
 @ask.launch
 
 def welcomemsg():
-
     welcome_msg = render_template('welcome')
     if connected:
         alexa_neuron.update([('state', 'idle'), ('name', None), ('direction', None)])
@@ -110,7 +138,7 @@ def welcomemsg():
 @ask.intent("MoveIntent")
 
 def move(direction):
-
+    clear_session_attributes()
     if direction == 'move':
         return question("In what direction?").reprompt("Can you please give a direction?")
 
@@ -125,11 +153,15 @@ Team5 = ['Jessie', 'teddy', 'Vladimir']
 @ask.intent("FollowIntent")
 
 def follow(firstname):
-
+    clear_session_attributes()
     if firstname in Team5:
         msg = "Tracking for {}. Can I help you with anything else?".format(firstname)
     elif firstname == 'follow' or firstname is None:
-        return question("Who should I follow?").reprompt("May I please have a name?")
+        if 'user' in session.attributes:
+            firstname = session.attributes['user']
+            msg = "Tracking for {}. Can I help you with anything else?".format(firstname)
+        else:
+            return question("Who should I follow?").reprompt("May I please have a name?")
     elif firstname not in Team5:
         if connected:
             alexa_neuron.update([('state', 'tracking'), ('name', firstname), ('direction', None)])
@@ -137,7 +169,7 @@ def follow(firstname):
         return question(msg).reprompt("May I please have another name?")
 
     if connected:
-        alexa_neuron.update([('state', 'tracking'), ('name', firstname), ('direction', None)])
+        alexa_neuron.update([('state', 'tracking'), ('name', firstname), ('direction', None), ('user', firstname)])
 
     session.attributes['user'] = firstname
 
@@ -147,7 +179,7 @@ def follow(firstname):
 @ask.intent("MemoryGameIntent")
 
 def game():
-
+    clear_session_attributes()
     numbers = [randint(0, 9) for _ in range(5)]
     round_msg = render_template('round', numbers=numbers)
     session.attributes['numbers'] = numbers[::-1]  # reverse
@@ -193,13 +225,13 @@ def answer(first, second, third, fourth, fifth):
         count = record['count'] + 1
         msg = render_template('win')
         score = 1
-        overall_score = sum(record["data"])
         record.setdefault("data",[]).append(score*100)
+        overall_score = sum(record["data"])
 
         updates = {
                 "score": score,
                 "overall_score": overall_score,
-                "overall_performance": scoreCalc(overall_score, score, count),
+                "overall_performance": scoreCalc(overall_score, count),
                 "count": count,
                 "data": record["data"]
         }
@@ -209,25 +241,28 @@ def answer(first, second, third, fourth, fifth):
         count = record['count'] + 1
         msg = render_template('lose')
         score = (getMatches(winning_numbers, response_list)/5)
-        overall_score = sum(record["data"])
         record.setdefault("data",[]).append(score*100)
+        overall_score = sum(record["data"])
         updates = {
                 "score": score,
                 "overall_score": overall_score,
-                "overall_performance": scoreCalc(overall_score, score, count),
+                "overall_performance": scoreCalc(overall_score, count),
                 "count": count,
                 "data": record["data"]
         }
         update_MEMORY_RECORD(record, updates)
 
-    session.attributes.pop('numbers', None)
+
+    clear_session_attributes()
 
     return question(msg)
 
 
 @ask.intent("MemPerformanceIntent")
 
-def performance():
+def memPerformance():
+    clear_session_attributes()
+
     if 'user' not in session.attributes:
         return question("Not tracking anyone right now. Can I help you with anything else?")
 
@@ -236,46 +271,78 @@ def performance():
     if record is None:
         return question("There are no records for this user. Can I help you with anything else?")
 
-    OverallScore = record['overall_performance']*100
+    OverallScore = record['overall_performance']
 
-    return question("Your overall score is {} percent. Would you me to help you with anything else?".format('%.2f'%(OverallScore)))
+    return question("Your overall score is {} percent. Can I help you with anything else?".format('%.2f'%(OverallScore)))
 
 
 @ask.intent("PlotIntent")
 
 def plot():
+    clear_session_attributes()
+
     if 'user' not in session.attributes:
         return question("Not tracking anyone right now. Can I help you with anything else?")
 
-    record = get_MEMORY_RECORD(session.attributes['user'])
+    mem_record = get_MEMORY_RECORD(session.attributes['user'])
+    ex_record = get_EXERCISE_RECORD(session.attributes['user'])
 
-    if record is None:
+    if mem_record is None and ex_record is None:
         return question("There are no records for this user. Can I help you with anything else?")
 
-    count = record['count'] + 1
-    data = record['data']
+    mem_plot = None
+    ex_plot = None
 
-    xaxis = list(range(1, count))
-    yaxis = data
-    y_mean = [record['overall_performance']]*len(xaxis)
+    if mem_record is not None:
+        count = mem_record['count'] + 1
+        data = mem_record['data']
 
-    fig, ax = plt.subplots()
-    data_line = ax.plot(xaxis,yaxis, label='Data', marker='o')
-    mean_line = ax.plot(xaxis,y_mean, label='Mean', linestyle='--')
+        xaxis = list(range(1, count))
+        yaxis = data
+        y_mean = [mem_record['overall_performance']]*len(xaxis)
+
+        fig, ax = plt.subplots()
+        data_line = ax.plot(xaxis,yaxis, label='Data', marker='o')
+        mean_line = ax.plot(xaxis,y_mean, label='Mean', linestyle='--')
 
 
-    ax.set(xlabel='Number of times played (#)', ylabel='Percentage Score (%)',
-            title='Memory Game Performance Analytics')
-    legend = ax.legend(loc='upper right')
+        ax.set(xlabel='Number of times played (#)', ylabel='Percentage Score (%)',
+                title='Memory Game Performance Analytics')
+        legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-    mem_plot = io.BytesIO()
+        mem_img = io.BytesIO()
 
-    plt.savefig(mem_plot, format="png")
-    mem_plot.seek(0)
+        plt.savefig(mem_img, format="png", bbox_extra_artists=(legend,), bbox_inches='tight')
+        mem_img.seek(0)
+        mem_plot = mem_img.getvalue()
+        mem_img.close()
 
-    SendMail(mem_plot.getvalue())
+    if ex_record is not None:
+        count = ex_record['count'] + 1
+        data = ex_record['data']
 
-    mem_plot.close()
+        xaxis = list(range(1, count))
+        yaxis = data
+        y_mean = [ex_record['overall_performance']]*len(xaxis)
+
+        fig, ax = plt.subplots()
+        data_line = ax.plot(xaxis,yaxis, label='Data', marker='o')
+        mean_line = ax.plot(xaxis,y_mean, label='Mean', linestyle='--')
+
+
+        ax.set(xlabel='Number of times exercised (#)', ylabel='Repetitions (#)',
+                title='Exercise Performance Analytics')
+        legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+        ex_img = io.BytesIO()
+
+        plt.savefig(ex_img, format="png", bbox_extra_artists=(legend,), bbox_inches='tight')
+        ex_img.seek(0)
+        ex_plot = ex_img.getvalue()
+        ex_img.close()
+
+    SendMail(mem_plot, ex_plot)
+
 
     return question("Emailing data, Can I help you with anything else?").reprompt("May I please have a command?")
 
@@ -283,25 +350,92 @@ def plot():
 @ask.intent("StartExerciseIntent")
 
 def start_exercise():
+    clear_session_attributes()
+
+    if 'user' not in session.attributes:
+        return question("Who is exercising?")
+    if connected:
+        alexa_neuron.update([('state', 'idle'),
+            ('name', None),
+            ('direction', None)])
+        time.sleep(2)
+        alexa_neuron.update([('state', 'idle'),
+            ('name', session.attributes['user']),
+            ('direction', None),
+            ('count', 0)])
+
     session.attributes['exercise'] = 'STARTING'
-    return question("Starting exercise session, when you are ready say start.").reprompt("Are you ready now?")
+    return question("Starting exercise session. Please step in front of and face Daisy. When you are ready say start.")
 
 @ask.intent("ExerciseIntent")
 
 def exercise():
     if 'exercise' not in session.attributes or session.attributes['exercise'] != 'STARTING':
         return question("Not in exercise session. Can I help you with anything else?")
+
+    if connected:
+        alexa_neuron.update([('state', 'exercise'),
+            ('name', session.attributes['user']),
+            ('direction', None)])
+        tracked = alexa_neuron.get('tracking')
+        if tracked is not None and not tracked:
+            return question("Please step in front of and face Daisy. Say start when you are ready.")
+
+
     session.attributes['exercise'] = 'IN_PROCESS'
     return question("Start Exercising now.")
 
 @ask.intent("StopExerciseIntent")
-def exercise():
+
+def stop_exercise():
     if 'exercise' not in session.attributes or session.attributes['exercise'] != 'IN_PROCESS':
         return question("Not in exercise session. Can I help you with anything else?")
-    return question("You did {} squats. Session has been saved. Can I help you with anything else?".format(0)).reprompt("May I please have a command?")
+    squat_count = 0
+    if connected:
+        squat_count = alexa_neuron.get('count') / 2
+        alexa_neuron.pop('count', None)
+        alexa_neuron.update([('state', 'idle'),
+            ('name', None),
+            ('direction', None)])
+        record = get_EXERCISE_RECORD(session.attributes['user'])
+        newRecord = False
+        if record is None:
+            newRecord = True
+            record = {
+                "user": session.attributes['user'],
+                "id_num": Team5.index(session.attributes['user']),
+                "count": 0,
+                "overall_count": 0,
+                "overall_performance": 0,
+                "data": []
+            }
+
+        count = record['count'] + 1
+        record.setdefault("data",[]).append(squat_count)
+        overall_score = sum(record["data"])
+
+        updates = {
+            "overall_count": overall_score,
+            "overall_performance": scoreCalc(overall_score, count),
+            "count": count,
+            "data": record["data"]
+        }
+
+        if newRecord:
+            mergedRecord = {**record, **updates}
+            push_EXERCISE_RECORD(mergedRecord)
+        else:
+            update_EXERCISE_RECORD(record, updates)
+
+
+    clear_session_attributes()
+    return question("You did {} squats. Session Data has been saved. Can I help you with anything else?"
+            .format('%.2f'%(squat_count)))
 
 @ask.intent("CallIntent")
+
 def call():
+    clear_session_attributes()
 
     call = twilioclient.calls.create(
             to="+12404785891",
@@ -313,6 +447,7 @@ def call():
 @ask.intent("TextIntent")
 
 def text():
+    clear_session_attributes()
 
     message = twilioclient.messages.create(
             to="+12404785891",
@@ -325,18 +460,24 @@ def text():
 @ask.intent("YesIntent")
 
 def yes():
+    clear_session_attributes()
+
     return question("What would you like to do?").reprompt("May I please have a command?")
 
 
 @ask.intent("NoIntent")
 
 def no():
+    clear_session_attributes()
+
     return statement("Ok. goodbye")
 
 
 @ask.intent("AMAZON.StopIntent")
 
 def stop():
+    clear_session_attributes()
+
     if connected:
         alexa_neuron.update([('state', 'idle'), ('name', None), ('direction', None)])
     return statement("Stopping")
