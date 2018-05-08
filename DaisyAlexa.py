@@ -314,6 +314,9 @@ def plot():
 
         plt.savefig(mem_img, format="png", bbox_extra_artists=(legend,), bbox_inches='tight')
         mem_img.seek(0)
+
+        plt.close(fig)
+
         mem_plot = mem_img.getvalue()
         mem_img.close()
 
@@ -338,6 +341,9 @@ def plot():
 
         plt.savefig(ex_img, format="png", bbox_extra_artists=(legend,), bbox_inches='tight')
         ex_img.seek(0)
+
+        plt.close(fig)
+
         ex_plot = ex_img.getvalue()
         ex_img.close()
 

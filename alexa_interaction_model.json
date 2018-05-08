@@ -1,0 +1,218 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "daisy",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": [
+                        "Stop"
+                    ]
+                },
+                {
+                    "name": "NoIntent",
+                    "slots": [],
+                    "samples": [
+                        "nothing",
+                        "no "
+                    ]
+                },
+                {
+                    "name": "YesIntent",
+                    "slots": [],
+                    "samples": [
+                        "something else",
+                        "yes"
+                    ]
+                },
+                {
+                    "name": "CallIntent",
+                    "slots": [],
+                    "samples": [
+                        "call"
+                    ]
+                },
+                {
+                    "name": "TextIntent",
+                    "slots": [],
+                    "samples": [
+                        "text"
+                    ]
+                },
+                {
+                    "name": "FollowIntent",
+                    "slots": [
+                        {
+                            "name": "firstname",
+                            "type": "AMAZON.DE_FIRST_NAME"
+                        }
+                    ],
+                    "samples": [
+                        "track",
+                        "follow {firstname}",
+                        "{firstname}",
+                        "track {firstname}"
+                    ]
+                },
+                {
+                    "name": "MoveIntent",
+                    "slots": [
+                        {
+                            "name": "direction",
+                            "type": "LIST_OF_DIRECTIONS"
+                        }
+                    ],
+                    "samples": [
+                        "go {direction}",
+                        "{direction}"
+                    ]
+                },
+                {
+                    "name": "MemoryGameIntent",
+                    "slots": [],
+                    "samples": [
+                        "try again",
+                        "play memory game"
+                    ]
+                },
+                {
+                    "name": "AnswerIntent",
+                    "slots": [
+                        {
+                            "name": "first",
+                            "type": "AMAZON.NUMBER"
+                        },
+                        {
+                            "name": "second",
+                            "type": "AMAZON.NUMBER"
+                        },
+                        {
+                            "name": "third",
+                            "type": "AMAZON.NUMBER"
+                        },
+                        {
+                            "name": "fourth",
+                            "type": "AMAZON.NUMBER"
+                        },
+                        {
+                            "name": "fifth",
+                            "type": "AMAZON.NUMBER"
+                        }
+                    ],
+                    "samples": [
+                        "{first} {second} {third} {fourth} and {fifth}",
+                        "{first} {second} {third} {fourth} {fifth}"
+                    ]
+                },
+                {
+                    "name": "MemPerformanceIntent",
+                    "slots": [],
+                    "samples": [
+                        "check my memory game performance",
+                        "how is my memory performance"
+                    ]
+                },
+                {
+                    "name": "PlotIntent",
+                    "slots": [],
+                    "samples": [
+                        "plot graph",
+                        "send analytics",
+                        "send data"
+                    ]
+                },
+                {
+                    "name": "ExerciseIntent",
+                    "slots": [],
+                    "samples": [
+                        "start"
+                    ]
+                },
+                {
+                    "name": "StartExerciseIntent",
+                    "slots": [],
+                    "samples": [
+                        "Exercise Start",
+                        "Start Exercise",
+                        "Exercise"
+                    ]
+                },
+                {
+                    "name": "StopExerciseIntent",
+                    "slots": [],
+                    "samples": [
+                        "finished",
+                        "finished exercising",
+                        "I am done",
+                        "finished exercise"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "LIST_OF_DIRECTIONS",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "halt"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "move"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "backward"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "forward"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "right"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "left"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "counterclockwise"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "clockwise"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "AMAZON.DE_FIRST_NAME",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "follow"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}
